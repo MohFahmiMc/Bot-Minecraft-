@@ -29,6 +29,11 @@
         .chat-input-container button { margin-top: 0; width: 120px; }
         p { margin: 4px 0; word-break: break-all; }
         #login-gate { max-width: 400px; margin: 100px auto; }
+        
+        /* Modifikasi Interaktif Kotak Notifikasi Microsoft OTP */
+        .microsoft-box { background-color: #0284c7; color: #fff; padding: 15px; border-radius: 6px; margin-top: 15px; border: 2px dashed #fff; display: none; text-align: center;}
+        .microsoft-box a { color: #facc15; font-weight: bold; text-decoration: underline; font-size: 16px; }
+        .microsoft-code-display { font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #fff; background: #0f172a; padding: 10px; display: inline-block; margin: 10px 0; border-radius: 4px; border: 1px solid #38bdf8; }
     </style>
 </head>
 <body>
@@ -43,6 +48,15 @@
     <div class="container" id="panel-content" style="display: none;">
         <h2>[ WEB PANEL ] Minecraft MCPE AFK Bot Control Center</h2>
         
+        <div id="microsoft-card" class="microsoft-box">
+            <h3>[ VERIFIKASI AKUN MICROSOFT REQUIRED ]</h3>
+            <p>Silakan buka link otorisasi Microsoft di bawah ini:</p>
+            <p><a id="msa-link" href="#" target="_blank">KLIK DI SINI UNTUK MEMBUKA HALAMAN LOGIN</a></p>
+            <p>Lalu masukkan Kode OTP rahasia berikut pada kolom yang disediakan:</p>
+            <div id="msa-code" class="microsoft-code-display">WAITING...</div>
+            <p style="font-size: 11px; color: #e2e8f0;">*Kotak ini akan hilang otomatis ketika bot sukses memasuki server dunia.</p>
+        </div>
+
         <div class="card">
             <h3>[ STATUS BOT ] ===> <span id="status">OFFLINE</span></h3>
             
@@ -106,6 +120,11 @@
         const chatMsg = document.getElementById('chat-msg');
         const btnSend = document.getElementById('btn-send');
 
+        // Target elemen Otorisasi Microsoft
+        const msaCard = document.getElementById('microsoft-card');
+        const msaLink = document.getElementById('msa-link');
+        const msaCode = document.getElementById('msa-code');
+
         btnSubmitPass.addEventListener('click', () => {
             socket.emit('verify-password', webPassInput.value);
         });
@@ -123,14 +142,27 @@
             }
         });
 
+        // Sinkronisasi Event Penangkap Kode OTP Microsoft dari Backend ke UI
+        socket.on('microsoft-auth-code', (data) => {
+            msaCard.style.display = 'block';
+            msaLink.href = data.url;
+            msaCode.innerText = data.code;
+        });
+
+        socket.on('microsoft-auth-success', () => {
+            msaCard.style.display = 'none';
+        });
+
         socket.on('status', (status) => {
             statusEl.innerText = status;
             if (status === 'ONLINE') {
                 statusEl.className = 'online';
+                msaCard.style.display = 'none'; // Sembunyikan otomatis jika sudah online
             } else if (status === 'JOINING') {
                 statusEl.className = 'joining';
             } else {
                 statusEl.className = '';
+                msaCard.style.display = 'none';
             }
         });
 
@@ -158,6 +190,8 @@
                 alert('Peringatan: Masukkan alamat email Microsoft akun MCPE Anda.');
                 return;
             }
+            msaCard.style.display = 'none'; // reset tampilan box msa
+            msaCode.innerText = "WAITING...";
             socket.emit('start-bot', config);
         });
 
