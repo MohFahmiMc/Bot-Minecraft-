@@ -1,3 +1,20 @@
+// ====================================================================
+// BYPASS BINDINGS CRASH - WAJIB DI BARIS PALING ATAS
+// Trik manipulasi cache agar library bedrock tidak mencari file compiler C++
+// ====================================================================
+try {
+    const fakePath = require.resolve('raknet-native');
+    require.cache[fakePath] = {
+        id: fakePath,
+        exports: { RakClient: class {}, RakServer: class {} },
+        filename: fakePath,
+        loaded: true
+    };
+} catch (err) {
+    // Abaikan jika library tidak ditemukan
+}
+// ====================================================================
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -9,7 +26,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Konfigurasi Port VPS dan Proteksi Password Web
+// Konfigurasi Port VPS dan Proteksi Password Web Panel
 const PORT = 26056;
 const WEB_PASSWORD = "1512011";
 
@@ -38,14 +55,14 @@ function startBot(config) {
     io.emit('status', 'JOINING');
 
     try {
-        // Mengonfigurasi client dengan opsi bypass raknet-native
+        // Mengonfigurasi client dengan opsi backend Pure JavaScript
         bot = bedrock.createClient({
             host: config.host,
             port: parseInt(config.port) || 19132,
             username: config.username,
             offline: false,
             profilesFolder: path.join(__dirname, 'auth_cache'),
-            raknetBackend: 'js' // MEMAKSA PENGGUNAAN JAVASCRIPT AGAR TIDAK ERROR DI BOT-HOSTING
+            raknetBackend: 'js' // Memaksa penggunaan JavaScript murni agar bypass biner aman
         });
 
         bot.on('start_game', (packet) => {
@@ -53,7 +70,7 @@ function startBot(config) {
             io.emit('status', 'ONLINE');
             io.emit('log', '[ MINECRAFT ] Sukses bergabung! Bot berhasil memuat map dunia.');
 
-            // Mekanisme anti-kick server / AFK loop rutin
+            // Mekanisme anti-kick server / AFK loop rutin (Mengayunkan Tangan)
             if (afkInterval) clearInterval(afkInterval);
             afkInterval = setInterval(() => {
                 if (bot && runtimeEntityId) {
@@ -93,6 +110,7 @@ function startBot(config) {
 io.on('connection', (socket) => {
     let clientAuthenticated = false;
 
+    // Verifikasi Password Web Panel
     socket.on('verify-password', (inputPass) => {
         if (inputPass === WEB_PASSWORD) {
             clientAuthenticated = true;
@@ -120,6 +138,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Menghapus cache session token login microsoft
     socket.on('logout-session', () => {
         if (!clientAuthenticated) return;
         if (bot) {
@@ -136,6 +155,7 @@ io.on('connection', (socket) => {
         io.emit('status', 'OFFLINE');
     });
 
+    // Manajemen Pengiriman Chat Global / Command Server (/)
     socket.on('send-chat', (msg) => {
         if (!clientAuthenticated || !bot) return;
         
@@ -160,6 +180,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Tombol Mekanik Klik Kiri (Pukul / Swing)
     socket.on('action-left-click', () => {
         if (!clientAuthenticated || !bot || !runtimeEntityId) return;
         bot.queue('animate', {
@@ -169,6 +190,7 @@ io.on('connection', (socket) => {
         io.emit('log', '[ INDIKASI ] Menjalankan interaksi klik kiri (Swing).');
     });
 
+    // Tombol Mekanik Klik Kanan (Gunakan Item / Lempar Alat Pancing)
     socket.on('action-right-click', () => {
         if (!clientAuthenticated || !bot) return;
         bot.queue('use_item', {
