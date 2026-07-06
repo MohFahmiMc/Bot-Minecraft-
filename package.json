@@ -1,14 +1,14 @@
 {
-  "name": "minecraft-afk-bot",
+  "name": "minecraft-afk-bot-bedrock",
   "version": "1.0.0",
-  "description": "Minecraft AFK Bot dengan Web Panel",
+  "description": "Minecraft MCPE AFK Bot dengan Web Panel dan Session Cache",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
+    "bedrock-protocol": "^3.26.0",
     "express": "^4.19.2",
-    "mineflayer": "^4.22.0",
     "socket.io": "^4.7.5"
   }
 }
