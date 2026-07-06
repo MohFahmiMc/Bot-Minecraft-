@@ -1,18 +1,18 @@
 // ====================================================================
-// BYPASS BINDINGS CRASH - VERSI ULTRA ROBUST (ANTI-ERROR CONSTRUCTOR)
-// Trik ini otomatis menyuplai class kosong untuk nama apa pun (Client/Server)
+// ULTRA PROTECTION: FORCE PURE JAVASCRIPT BACKEND
+// Trik mengelabui sistem agar menganggap 'raknet-native' tidak ada.
+// Ini akan membuat Login Microsoft PREMIUM tetap aman & tidak akan crash!
 // ====================================================================
-try {
-    const fakePath = require.resolve('raknet-native');
-    require.cache[fakePath] = {
-        id: fakePath,
-        exports: new Proxy({}, { get: () => class {} }), 
-        filename: fakePath,
-        loaded: true
-    };
-} catch (err) {
-    // Abaikan jika library tidak ditemukan
-}
+const Module = require('module');
+const originalLoad = Module._load;
+Module._load = function (request, parent, isMain) {
+    if (request === 'raknet-native') {
+        const err = new Error("Cannot find module 'raknet-native'");
+        err.code = 'MODULE_NOT_FOUND';
+        throw err;
+    }
+    return originalLoad.apply(this, arguments);
+};
 // ====================================================================
 
 const express = require('express');
@@ -26,9 +26,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Konfigurasi Port VPS dan Proteksi Password Web Panel
-const PORT = 26056;
-const WEB_PASSWORD = "1512011";
+// IP & PORT VPS BINDING (Membaca port otomatis dari bot-hosting.net)
+const PORT = process.env.SERVER_PORT || process.env.PORT || 26056;
+const WEB_PASSWORD = "1512011"; // Password panel diaktifkan kembali sesuai request
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -36,7 +36,7 @@ let bot = null;
 let runtimeEntityId = null;
 let afkInterval = null;
 
-// Intersepsi console.log untuk menyalurkan data login Microsoft ke Web UI
+// Mengirimkan log konsol VPS (Termasuk link & kode OTP Microsoft) ke Web UI kamu
 const originalLog = console.log;
 console.log = function (...args) {
     originalLog.apply(console, args);
@@ -46,31 +46,30 @@ console.log = function (...args) {
 
 function startBot(config) {
     if (bot) {
-        io.emit('log', '[ SYSTEM ] Mematikan bot aktif sebelumnya...');
+        io.emit('log', '[ SYSTEM ] Mematikan instansi bot sebelumnya...');
         try { bot.close(); } catch (e) {}
         clearInterval(afkInterval);
     }
 
-    io.emit('log', '[ SYSTEM ] Menghubungkan ke server Bedrock/MCPE: ' + config.host + ':' + config.port);
+    io.emit('log', '[ SYSTEM ] Menghubungkan ke server MCPE: ' + config.host + ':' + config.port);
     io.emit('status', 'JOINING');
 
     try {
-        // Mengonfigurasi client dengan opsi backend Pure JavaScript
+        // AKUN MICROSOFT PREMIUM AKTIF KEMBALI
         bot = bedrock.createClient({
             host: config.host,
             port: parseInt(config.port) || 19132,
-            username: config.username,
-            offline: false,
-            profilesFolder: path.join(__dirname, 'auth_cache'),
-            raknetBackend: 'js' // Memaksa penggunaan JavaScript murni agar bypass biner aman
+            username: config.username, // Masukkan email Microsoft kamu di Web
+            offline: false,            // FALSE = Wajib Login Microsoft resmi (Premium)
+            profilesFolder: path.join(__dirname, 'auth_cache'), // Menyimpan session biar gak usah isi kode terus
+            raknetBackend: 'js'
         });
 
         bot.on('start_game', (packet) => {
             runtimeEntityId = packet.runtime_entity_id;
             io.emit('status', 'ONLINE');
-            io.emit('log', '[ MINECRAFT ] Sukses bergabung! Bot berhasil memuat map dunia.');
+            io.emit('log', '[ MINECRAFT ] Sukses! Bot berhasil masuk ke dalam server.');
 
-            // Mekanisme anti-kick server / AFK loop rutin (Mengayunkan Tangan)
             if (afkInterval) clearInterval(afkInterval);
             afkInterval = setInterval(() => {
                 if (bot && runtimeEntityId) {
@@ -78,39 +77,39 @@ function startBot(config) {
                         action_id: 1,
                         runtime_entity_id: runtimeEntityId
                     });
-                    io.emit('log', '[ AFK ] Bot melakukan pergerakan kecil (Anti-Kick).');
+                    io.emit('log', '[ AFK ] Bot melakukan pergerakan anti-kick.');
                 }
             }, 30000);
         });
 
         bot.on('text', (packet) => {
             if (packet.message) {
-                const sender = packet.source_name || 'SERVER/SYSTEM';
+                const sender = packet.source_name || 'SERVER';
                 io.emit('chat-message', { username: sender, message: packet.message });
             }
         });
 
         bot.on('close', () => {
             io.emit('status', 'OFFLINE');
-            io.emit('log', '[ MINECRAFT ] Koneksi terputus dari server target.');
+            io.emit('log', '[ MINECRAFT ] Koneksi bot terputus.');
             clearInterval(afkInterval);
             bot = null;
             runtimeEntityId = null;
         });
 
         bot.on('error', (err) => {
-            io.emit('log', '[ ERROR ] Hubungan terganggu: ' + err.message);
+            io.emit('log', '[ ERROR ] Masalah Jaringan: ' + err.message);
         });
 
     } catch (err) {
-        io.emit('log', '[ ERROR INITIALIZATION ] Gagal memproses: ' + err.message);
+        io.emit('log', '[ INITIALIZATION ERROR ] Gagal memicu client: ' + err.message);
     }
 }
 
 io.on('connection', (socket) => {
     let clientAuthenticated = false;
 
-    // Verifikasi Password Web Panel
+    // Sistem Login Web Panel Utama
     socket.on('verify-password', (inputPass) => {
         if (inputPass === WEB_PASSWORD) {
             clientAuthenticated = true;
@@ -134,11 +133,10 @@ io.on('connection', (socket) => {
             bot = null;
             runtimeEntityId = null;
             io.emit('status', 'OFFLINE');
-            io.emit('log', '[ SYSTEM ] Bot diputus paksa dari panel.');
+            io.emit('log', '[ SYSTEM ] Bot dimatikan dari panel.');
         }
     });
 
-    // Menghapus cache session token login microsoft
     socket.on('logout-session', () => {
         if (!clientAuthenticated) return;
         if (bot) {
@@ -148,14 +146,11 @@ io.on('connection', (socket) => {
         const cacheDir = path.join(__dirname, 'auth_cache');
         if (fs.existsSync(cacheDir)) {
             fs.rmSync(cacheDir, { recursive: true, force: true });
-            io.emit('log', '[ SYSTEM ] Session cache dihapus. Silakan lakukan proses login ulang.');
-        } else {
-            io.emit('log', '[ SYSTEM ] Session cache kosong.');
+            io.emit('log', '[ SYSTEM ] Cache login dihapus. Silakan login ulang nanti.');
         }
         io.emit('status', 'OFFLINE');
     });
 
-    // Manajemen Pengiriman Chat Global / Command Server (/)
     socket.on('send-chat', (msg) => {
         if (!clientAuthenticated || !bot) return;
         
@@ -166,7 +161,7 @@ io.on('connection', (socket) => {
                 internal: false,
                 version: 52
             });
-            io.emit('log', '[ COMMAND ] Eksekusi perintah: ' + msg);
+            io.emit('log', '[ COMMAND ] Menjalankan perintah: ' + msg);
         } else {
             bot.queue('text', {
                 type: 'chat',
@@ -180,17 +175,15 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Tombol Mekanik Klik Kiri (Pukul / Swing)
     socket.on('action-left-click', () => {
         if (!clientAuthenticated || !bot || !runtimeEntityId) return;
         bot.queue('animate', {
             action_id: 1,
             runtime_entity_id: runtimeEntityId
         });
-        io.emit('log', '[ INDIKASI ] Menjalankan interaksi klik kiri (Swing).');
+        io.emit('log', '[ KONTROL ] Klik Kiri (Swing).');
     });
 
-    // Tombol Mekanik Klik Kanan (Gunakan Item / Lempar Alat Pancing)
     socket.on('action-right-click', () => {
         if (!clientAuthenticated || !bot) return;
         bot.queue('use_item', {
@@ -203,10 +196,12 @@ io.on('connection', (socket) => {
             click_position: { x: 0, y: 0, z: 0 },
             block_runtime_id: 0
         });
-        io.emit('log', '[ INDIKASI ] Menjalankan interaksi klik kanan (Gunakan Item/Mancing).');
+        io.emit('log', '[ KONTROL ] Klik Kanan (Mancing / Gunakan Item).');
     });
 });
 
+// MEMBUKA AKSES KE MANAPUN (0.0.0.0) AGAR BISA DIAKSES VIA IP PUBLIK VPS KAMU
 server.listen(PORT, '0.0.0.0', () => {
-    console.log('[ SERVER ] Panel berjalan pada port ' + PORT);
+    console.log('[ SERVER ] Web Panel Sukses Berjalan!');
+    console.log('[ SERVER ] Silakan akses lewat IP VPS kamu dengan Port: ' + PORT);
 });
