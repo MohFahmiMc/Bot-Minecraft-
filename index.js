@@ -1,7 +1,7 @@
 // ====================================================================
 // ULTRA PROTECTION: FORCE PURE JAVASCRIPT BACKEND
-// Trik mengelabui sistem agar menganggap 'raknet-native' tidak ada.
-// Ini akan membuat Login Microsoft PREMIUM tetap aman & tidak akan crash!
+// Memaksa bedrock-protocol beralih ke engine JS murni agar bypass biner aman
+// dan proses Login Microsoft Premium tidak mengalami crash constructor.
 // ====================================================================
 const Module = require('module');
 const originalLoad = Module._load;
@@ -26,9 +26,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// IP & PORT VPS BINDING (Membaca port otomatis dari bot-hosting.net)
+// OTOMATIS: Membaca Port Publik berapapun yang diberikan oleh bot-hosting.net / VPS kamu
 const PORT = process.env.SERVER_PORT || process.env.PORT || 26056;
-const WEB_PASSWORD = "1512011"; // Password panel diaktifkan kembali sesuai request
+const WEB_PASSWORD = "1512011";
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -36,7 +36,7 @@ let bot = null;
 let runtimeEntityId = null;
 let afkInterval = null;
 
-// Mengirimkan log konsol VPS (Termasuk link & kode OTP Microsoft) ke Web UI kamu
+// Salurkan log console standard ke Web UI
 const originalLog = console.log;
 console.log = function (...args) {
     originalLog.apply(console, args);
@@ -55,21 +55,33 @@ function startBot(config) {
     io.emit('status', 'JOINING');
 
     try {
-        // AKUN MICROSOFT PREMIUM AKTIF KEMBALI
+        // LOGIN MICROSOFT PREMIUM RESMI (offline: false)
         bot = bedrock.createClient({
             host: config.host,
             port: parseInt(config.port) || 19132,
-            username: config.username, // Masukkan email Microsoft kamu di Web
-            offline: false,            // FALSE = Wajib Login Microsoft resmi (Premium)
-            profilesFolder: path.join(__dirname, 'auth_cache'), // Menyimpan session biar gak usah isi kode terus
-            raknetBackend: 'js'
+            username: config.username, 
+            offline: false, // WAJIB FALSE AGAR LOGIN AKUN MICROSOFT AKURAT
+            profilesFolder: path.join(__dirname, 'auth_cache'),
+            raknetBackend: 'js',
+            
+            // MENANGKAP KODE OTP MICROSOFT SECARA OTOMATIS DAN AKURAT
+            onMsaCode: (data) => {
+                io.emit('microsoft-auth-code', {
+                    code: data.userCode,
+                    url: data.verificationUri,
+                    message: data.message
+                });
+                io.emit('log', '[ MICROSOFT ] Menunggu verifikasi perangkat... Kode OTP telah dikirim ke Web UI!');
+            }
         });
 
         bot.on('start_game', (packet) => {
             runtimeEntityId = packet.runtime_entity_id;
             io.emit('status', 'ONLINE');
-            io.emit('log', '[ MINECRAFT ] Sukses! Bot berhasil masuk ke dalam server.');
+            io.emit('log', '[ MINECRAFT ] Sukses! Bot Premium berhasil masuk ke dalam game server.');
+            io.emit('microsoft-auth-success', true); // Sembunyikan form OTP di web jika sukses
 
+            // Loop Anti-Kick 30 detik
             if (afkInterval) clearInterval(afkInterval);
             afkInterval = setInterval(() => {
                 if (bot && runtimeEntityId) {
@@ -109,7 +121,6 @@ function startBot(config) {
 io.on('connection', (socket) => {
     let clientAuthenticated = false;
 
-    // Sistem Login Web Panel Utama
     socket.on('verify-password', (inputPass) => {
         if (inputPass === WEB_PASSWORD) {
             clientAuthenticated = true;
@@ -146,7 +157,7 @@ io.on('connection', (socket) => {
         const cacheDir = path.join(__dirname, 'auth_cache');
         if (fs.existsSync(cacheDir)) {
             fs.rmSync(cacheDir, { recursive: true, force: true });
-            io.emit('log', '[ SYSTEM ] Cache login dihapus. Silakan login ulang nanti.');
+            io.emit('log', '[ SYSTEM ] Cache login dihapus. Silakan login ulang.');
         }
         io.emit('status', 'OFFLINE');
     });
@@ -200,8 +211,8 @@ io.on('connection', (socket) => {
     });
 });
 
-// MEMBUKA AKSES KE MANAPUN (0.0.0.0) AGAR BISA DIAKSES VIA IP PUBLIK VPS KAMU
+// MEMBUKA LOGIKAL IP KE ALL INTERFACES (0.0.0.0) BIAR BISA DIAKSES VIA IP VPS PUBLIK MANAPUN
 server.listen(PORT, '0.0.0.0', () => {
-    console.log('[ SERVER ] Web Panel Sukses Berjalan!');
-    console.log('[ SERVER ] Silakan akses lewat IP VPS kamu dengan Port: ' + PORT);
+    console.log('[ VPS SERVER ] Web Panel Aktif!');
+    console.log('[ VPS SERVER ] Akses menggunakan IP VPS Anda dengan Port: ' + PORT);
 });
