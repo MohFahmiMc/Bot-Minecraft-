@@ -1,12 +1,12 @@
 // ====================================================================
-// BYPASS BINDINGS CRASH - WAJIB DI BARIS PALING ATAS
-// Trik manipulasi cache agar library bedrock tidak mencari file compiler C++
+// BYPASS BINDINGS CRASH - VERSI ULTRA ROBUST (ANTI-ERROR CONSTRUCTOR)
+// Trik ini otomatis menyuplai class kosong untuk nama apa pun (Client/Server)
 // ====================================================================
 try {
     const fakePath = require.resolve('raknet-native');
     require.cache[fakePath] = {
         id: fakePath,
-        exports: { RakClient: class {}, RakServer: class {} },
+        exports: new Proxy({}, { get: () => class {} }), 
         filename: fakePath,
         loaded: true
     };
