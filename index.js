@@ -38,14 +38,14 @@ function startBot(config) {
     io.emit('status', 'JOINING');
 
     try {
-        // bedrock-protocol secara otomatis menyimpan data auth token di folder khusus 
-        // sehingga user tidak perlu melakukan verifikasi ulang pada peluncuran berikutnya
+        // Mengonfigurasi client dengan opsi bypass raknet-native
         bot = bedrock.createClient({
             host: config.host,
             port: parseInt(config.port) || 19132,
             username: config.username,
             offline: false,
-            profilesFolder: path.join(__dirname, 'auth_cache')
+            profilesFolder: path.join(__dirname, 'auth_cache'),
+            raknetBackend: 'js' // MEMAKSA PENGGUNAAN JAVASCRIPT AGAR TIDAK ERROR DI BOT-HOSTING
         });
 
         bot.on('start_game', (packet) => {
@@ -67,7 +67,6 @@ function startBot(config) {
         });
 
         bot.on('text', (packet) => {
-            // Membaca chat global, chat sistem, maupun bisikan player lain
             if (packet.message) {
                 const sender = packet.source_name || 'SERVER/SYSTEM';
                 io.emit('chat-message', { username: sender, message: packet.message });
@@ -94,7 +93,6 @@ function startBot(config) {
 io.on('connection', (socket) => {
     let clientAuthenticated = false;
 
-    // Sistem verifikasi password panel web sebelum akses diberikan
     socket.on('verify-password', (inputPass) => {
         if (inputPass === WEB_PASSWORD) {
             clientAuthenticated = true;
@@ -128,7 +126,6 @@ io.on('connection', (socket) => {
             try { bot.close(); } catch (e) {}
             bot = null;
         }
-        // Menghapus folder auth token agar user bisa mengganti akun Microsoft
         const cacheDir = path.join(__dirname, 'auth_cache');
         if (fs.existsSync(cacheDir)) {
             fs.rmSync(cacheDir, { recursive: true, force: true });
@@ -143,7 +140,6 @@ io.on('connection', (socket) => {
         if (!clientAuthenticated || !bot) return;
         
         if (msg.startsWith('/')) {
-            // Mengirimkan perintah Command ke server MCPE
             bot.queue('command_request', {
                 command: msg,
                 origin: { type: 0, uuid: bot.uuid || '', request_id: 'vps_bot_cmd' },
@@ -152,7 +148,6 @@ io.on('connection', (socket) => {
             });
             io.emit('log', '[ COMMAND ] Eksekusi perintah: ' + msg);
         } else {
-            // Mengirimkan chat biasa ke server MCPE
             bot.queue('text', {
                 type: 'chat',
                 needs_translation: false,
@@ -165,7 +160,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Simulasi klik kiri (Pukul / Hancurkan)
     socket.on('action-left-click', () => {
         if (!clientAuthenticated || !bot || !runtimeEntityId) return;
         bot.queue('animate', {
@@ -175,7 +169,6 @@ io.on('connection', (socket) => {
         io.emit('log', '[ INDIKASI ] Menjalankan interaksi klik kiri (Swing).');
     });
 
-    // Simulasi klik kanan (Gunakan Item / Lempar Pancingan)
     socket.on('action-right-click', () => {
         if (!clientAuthenticated || !bot) return;
         bot.queue('use_item', {
