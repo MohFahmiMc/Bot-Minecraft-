@@ -87,13 +87,11 @@
     <script>
         const socket = io();
 
-        // Elemen Gate Keamanan
         const loginGate = document.getElementById('login-gate');
         const panelContent = document.getElementById('panel-content');
         const webPassInput = document.getElementById('web-password-input');
         const btnSubmitPass = document.getElementById('btn-submit-pass');
 
-        // Elemen Dashboard
         const statusEl = document.getElementById('status');
         const logBox = document.getElementById('log-box');
         const chatBox = document.getElementById('chat-box');
@@ -108,7 +106,6 @@
         const chatMsg = document.getElementById('chat-msg');
         const btnSend = document.getElementById('btn-send');
 
-        // Autentikasi Web Panel
         btnSubmitPass.addEventListener('click', () => {
             socket.emit('verify-password', webPassInput.value);
         });
@@ -126,7 +123,6 @@
             }
         });
 
-        // Sinkronisasi Status Koneksi
         socket.on('status', (status) => {
             statusEl.innerText = status;
             if (status === 'ONLINE') {
@@ -152,7 +148,6 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
-        // Tombol Trigger Perintah Aksi
         btnConnect.addEventListener('click', () => {
             const config = {
                 username: usernameInput.value,
