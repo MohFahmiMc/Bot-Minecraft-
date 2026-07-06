@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft AFK Bot Panel</title>
+    <title>Minecraft MCPE AFK Bot Panel</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: 0 auto; }
@@ -16,46 +16,68 @@
         button:hover { background-color: #005999; }
         .btn-danger { background-color: #b30000; }
         .btn-danger:hover { background-color: #800000; }
+        .btn-warn { background-color: #d97706; }
+        .btn-warn:hover { background-color: #b45309; }
+        .action-grid { display: flex; gap: 10px; margin-top: 10px; }
         #status { font-weight: bold; color: #ff3333; background-color: rgba(255,51,51,0.1); padding: 4px 8px; border-radius: 4px; }
         .online { color: #33ff33 !important; background-color: rgba(51,255,51,0.1) !important; }
+        .joining { color: #facc15 !important; background-color: rgba(250,204,21,0.1) !important; }
         #log-box, #chat-box { background-color: #0a0a0a; height: 250px; overflow-y: auto; padding: 12px; font-family: 'Courier New', Courier, monospace; border: 1px solid #333; border-radius: 4px; margin-top: 10px; font-size: 13px; }
         #chat-box { height: 200px; }
         .chat-input-container { display: flex; gap: 10px; margin-top: 10px; }
         .chat-input-container input { margin-top: 0; flex: 1; }
         .chat-input-container button { margin-top: 0; width: 120px; }
         p { margin: 4px 0; word-break: break-all; }
+        #login-gate { max-width: 400px; margin: 100px auto; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>[ WEB PANEL ] Minecraft AFK Bot Control Center</h2>
+
+    <div id="login-gate" class="card">
+        <h3>[ AUTHENTICATION REQUIRED ]</h3>
+        <label>Masukkan Kode Sandi Web:</label>
+        <input type="password" id="web-password-input" placeholder="Sandi Panel Utama">
+        <button id="btn-submit-pass">[ MASUK KE SYSTEM ]</button>
+    </div>
+
+    <div class="container" id="panel-content" style="display: none;">
+        <h2>[ WEB PANEL ] Minecraft MCPE AFK Bot Control Center</h2>
         
         <div class="card">
             <h3>[ STATUS BOT ] ===> <span id="status">OFFLINE</span></h3>
             
-            <label>Email Akun Microsoft Asli:</label>
-            <input type="email" id="username" placeholder="nama_akun@outlook.com">
+            <label>Email Akun Microsoft (Pemilik Game):</label>
+            <input type="email" id="username" placeholder="akun_microsoft@outlook.com">
             
-            <label>Alamat IP Server Minecraft:</label>
+            <label>Alamat IP Server Minecraft PE:</label>
             <input type="text" id="host" value="be.prownetwork.net">
             
-            <label>Port Server Minecraft (Default Java: 25565):</label>
-            <input type="number" id="port" value="25565">
+            <label>Port Server Minecraft PE (Default Bedrock: 19132):</label>
+            <input type="number" id="port" value="19132">
             
             <button id="btn-connect">[ NYALAKAN BOT ]</button>
             <button id="btn-disconnect" class="btn-danger">[ MATIKAN BOT ]</button>
+            <button id="btn-logout" class="btn-warn">[ LOGOUT & HAPUS SESSION CACHE ]</button>
         </div>
 
         <div class="card">
-            <h3>[ CONSOLE LOG & OTENTIKASI MICROSOFT ]</h3>
+            <h3>[ KONTROL MEKANIK BOT ]</h3>
+            <div class="action-grid">
+                <button id="btn-left-click">[ KLIK KIRI / SWING ]</button>
+                <button id="btn-right-click" style="background-color: #10b981;">[ KLIK KANAN / MANCING ]</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>[ CONSOLE LOG & PROSES JOINING ]</h3>
             <div id="log-box"></div>
         </div>
 
         <div class="card">
-            <h3>[ LIVE GAME CHAT ]</h3>
+            <h3>[ MONITOR CHAT & EKSEKUSI COMMAND ]</h3>
             <div id="chat-box"></div>
             <div class="chat-input-container">
-                <input type="text" id="chat-msg" placeholder="Ketik pesan yang akan dikirim ke server...">
+                <input type="text" id="chat-msg" placeholder="Ketik pesan atau /command server...">
                 <button id="btn-send">[ KIRIM ]</button>
             </div>
         </div>
@@ -65,6 +87,13 @@
     <script>
         const socket = io();
 
+        // Elemen Gate Keamanan
+        const loginGate = document.getElementById('login-gate');
+        const panelContent = document.getElementById('panel-content');
+        const webPassInput = document.getElementById('web-password-input');
+        const btnSubmitPass = document.getElementById('btn-submit-pass');
+
+        // Elemen Dashboard
         const statusEl = document.getElementById('status');
         const logBox = document.getElementById('log-box');
         const chatBox = document.getElementById('chat-box');
@@ -73,13 +102,37 @@
         const portInput = document.getElementById('port');
         const btnConnect = document.getElementById('btn-connect');
         const btnDisconnect = document.getElementById('btn-disconnect');
+        const btnLogout = document.getElementById('btn-logout');
+        const btnLeftClick = document.getElementById('btn-left-click');
+        const btnRightClick = document.getElementById('btn-right-click');
         const chatMsg = document.getElementById('chat-msg');
         const btnSend = document.getElementById('btn-send');
 
+        // Autentikasi Web Panel
+        btnSubmitPass.addEventListener('click', () => {
+            socket.emit('verify-password', webPassInput.value);
+        });
+
+        webPassInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') btnSubmitPass.click();
+        });
+
+        socket.on('auth-result', (res) => {
+            if (res.success) {
+                loginGate.style.display = 'none';
+                panelContent.style.display = 'block';
+            } else {
+                alert(res.msg);
+            }
+        });
+
+        // Sinkronisasi Status Koneksi
         socket.on('status', (status) => {
             statusEl.innerText = status;
             if (status === 'ONLINE') {
                 statusEl.className = 'online';
+            } else if (status === 'JOINING') {
+                statusEl.className = 'joining';
             } else {
                 statusEl.className = '';
             }
@@ -99,6 +152,7 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
+        // Tombol Trigger Perintah Aksi
         btnConnect.addEventListener('click', () => {
             const config = {
                 username: usernameInput.value,
@@ -106,7 +160,7 @@
                 port: portInput.value
             };
             if (!config.username) {
-                alert('Peringatan: Harap masukkan email Microsoft asli Anda terlebih dahulu.');
+                alert('Peringatan: Masukkan alamat email Microsoft akun MCPE Anda.');
                 return;
             }
             socket.emit('start-bot', config);
@@ -114,6 +168,20 @@
 
         btnDisconnect.addEventListener('click', () => {
             socket.emit('stop-bot');
+        });
+
+        btnLogout.addEventListener('click', () => {
+            if (confirm('Apakah Anda ingin menghapus data login dan cache akun ini dari sistem?')) {
+                socket.emit('logout-session');
+            }
+        });
+
+        btnLeftClick.addEventListener('click', () => {
+            socket.emit('action-left-click');
+        });
+
+        btnRightClick.addEventListener('click', () => {
+            socket.emit('action-right-click');
         });
 
         btnSend.addEventListener('click', () => {
@@ -125,9 +193,7 @@
         });
 
         chatMsg.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                btnSend.click();
-            }
+            if (e.key === 'Enter') btnSend.click();
         });
     </script>
 </body>
